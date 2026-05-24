@@ -8,7 +8,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
 from camarilla.bot.filters import AuthorizedUser
-from camarilla.inventario import InventarioError, leer_inventario
+from camarilla.bot.ollama import OllamaError, ask
+from camarilla.inventario import InventarioError, _render, leer_inventario
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -69,6 +70,22 @@ async def cmd_inventario(message: Message) -> None:
 
 
 @router.message(AuthorizedUser())
-async def echo_handler(message: Message) -> None:
-    """Echo any non-command text back to confirm the bot is alive."""
-    await message.answer(message.text or "…")
+async def ai_handler(message: Message) -> None:
+    """Handle non-command text by querying Ollama with inventory context."""
+    try:
+        inventory_data = await asyncio.to_thread(leer_inventario)
+        context = _render(inventory_data)
+    except InventarioError:
+        context = None
+
+    try:
+        response = await asyncio.to_thread(ask, message.text, context)
+    except OllamaError:
+        logger.exception("Ollama query failed")
+        await message.answer(
+            "AI service is currently unavailable. Please try again later."
+        )
+        return
+
+    response = response[:4000]
+    await message.answer(response, parse_mode=None)

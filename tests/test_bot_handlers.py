@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from camarilla.bot.handlers import (
+    ai_handler,
     cmd_help,
     cmd_inventario,
     cmd_start,
-    echo_handler,
 )
 
 
@@ -88,19 +88,63 @@ class TestCmdInventario:
         assert "File not found" in call_args
 
 
-class TestEchoHandler:
-    """Tests for the echo fallback handler."""
+class TestAIHandler:
+    """Tests for the AI fallback handler."""
 
     @pytest.mark.asyncio
-    async def test_echoes_text(self, mock_message):
-        mock_message.text = "hello world"
-        await echo_handler(mock_message)
+    async def test_ai_handler_success(self, mock_message):
+        mock_message.text = "Where is the screwdriver?"
 
-        mock_message.answer.assert_awaited_once_with("hello world")
+        with patch(
+            "camarilla.bot.handlers.leer_inventario",
+            return_value={"Garage": ["Screwdriver"]},
+        ):
+            with patch(
+                "camarilla.bot.handlers.ask",
+                return_value="It's in the garage.",
+            ):
+                await ai_handler(mock_message)
+
+        mock_message.answer.assert_awaited_once()
+        call_args = mock_message.answer.call_args
+        assert call_args[0][0] == "It's in the garage."
+        assert call_args[1].get("parse_mode") is None
 
     @pytest.mark.asyncio
-    async def test_echoes_empty_text(self, mock_message):
-        mock_message.text = None
-        await echo_handler(mock_message)
+    async def test_ai_handler_ollama_error(self, mock_message):
+        from camarilla.bot.ollama import OllamaError
 
-        mock_message.answer.assert_awaited_once_with("…")
+        mock_message.text = "Where is the screwdriver?"
+
+        with patch(
+            "camarilla.bot.handlers.leer_inventario",
+            return_value={"Garage": ["Screwdriver"]},
+        ):
+            with patch(
+                "camarilla.bot.handlers.ask",
+                side_effect=OllamaError("Connection refused"),
+            ):
+                await ai_handler(mock_message)
+
+        mock_message.answer.assert_awaited_once()
+        call_args = mock_message.answer.call_args[0][0]
+        assert "unavailable" in call_args.lower()
+
+    @pytest.mark.asyncio
+    async def test_ai_handler_truncates_long_response(self, mock_message):
+        mock_message.text = "List everything."
+
+        long_response = "A" * 5000
+        with patch(
+            "camarilla.bot.handlers.leer_inventario",
+            return_value={"Garage": ["Screwdriver"]},
+        ):
+            with patch(
+                "camarilla.bot.handlers.ask",
+                return_value=long_response,
+            ):
+                await ai_handler(mock_message)
+
+        mock_message.answer.assert_awaited_once()
+        call_args = mock_message.answer.call_args[0][0]
+        assert len(call_args) == 4000

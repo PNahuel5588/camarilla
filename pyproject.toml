@@ -9,6 +9,7 @@ description = "Home inventory management bot"
 requires-python = ">=3.11"
 dependencies = [
     "aiogram>=3.0",
+    "ollama>=0.1.0",
 ]
 
 [project.optional-dependencies]

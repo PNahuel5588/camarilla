@@ -12,3 +12,6 @@ BACKUP_PREFIX: str = "inventario_"
 
 BOT_TOKEN: str = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 AUTHORIZED_USER_ID: int = int(os.environ["TELEGRAM_USER_ID"]) if "TELEGRAM_USER_ID" in os.environ else 0
+
+OLLAMA_MODEL: str = os.environ.get("OLLAMA_MODEL", "qwen2:1.5b")
+OLLAMA_URL: str = os.environ.get("OLLAMA_URL", "http://localhost:11434")
