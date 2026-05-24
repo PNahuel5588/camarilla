@@ -120,21 +120,28 @@ python -m camarilla
 pytest -v
 ```
 
-### 3. Instalar Ollama (para Fase 3)
+### 3. Instalar Ollama
 
 ```bash
 # Dentro del CT
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Descargar un modelo liviano
-ollama pull phi3
-# o: ollama pull qwen2:1.5b  (más chico, más rápido)
+# Descargar el modelo (qwen2:1.5b — recomendado, liviano y rápido)
+ollama pull qwen2:1.5b
 
 # Verificar que responde
-curl http://localhost:11434/api/generate -d '{"model":"phi3","prompt":"hi","stream":false}'
+ollama run qwen2:1.5b "hi"
 ```
 
-Nota: Ollama necesita al menos 2GB de RAM para modelos pequeños. Si tu CT tiene 1GB, considerá subirlo a 2-4GB o usar un modelo cuantizado (q4).
+Requisitos de RAM por modelo:
+
+| Modelo | RAM mínima | Disco | Velocidad |
+|--------|-----------|-------|-----------|
+| `qwen2:1.5b` | ~2 GB | ~1 GB | Rápido (~2-5s) |
+| `phi3:3.8b` | ~4 GB | ~2.5 GB | Medio (~5-15s) |
+| `llama3:8b` | ~8 GB | ~5 GB | Lento (~15-45s) |
+
+Para cambiar el modelo: setear `OLLAMA_MODEL=phi3` en el environment.
 
 ### 4. Configurar el bot de Telegram (Fase 2)
 
@@ -168,6 +175,7 @@ Restart=always
 RestartSec=5
 Environment=TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
 Environment=TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
+Environment=OLLAMA_MODEL=qwen2:1.5b
 
 [Install]
 WantedBy=multi-user.target
@@ -189,6 +197,6 @@ journalctl -u camarilla -f
 | Fase | Estado | Qué hace |
 |------|--------|----------|
 | 1 | ✅ Completa | Estructura + lectura/escritura segura de inventario.md |
-| 2 | 🔲 Pendiente | Bot de Telegram con aiogram |
-| 3 | 🔲 Pendiente | Integración con Ollama (IA local) |
+| 2 | ✅ Completa | Bot de Telegram con aiogram |
+| 3 | ✅ Completa | Integración con Ollama (IA local) |
 | 4 | 🔲 Pendiente | Modificación del inventario por chat |
