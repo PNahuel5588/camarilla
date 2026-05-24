@@ -1,10 +1,8 @@
 """Entry point for `python -m camarilla`."""
 
+import asyncio
 
-def main() -> None:
-    """No-op entry point for Phase 1."""
-    pass
-
+from camarilla.bot.main import main
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
