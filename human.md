@@ -1,28 +1,12 @@
-# Camarilla — Guía para Humanos
+# Camarilla — Guía Operativa
 
-## Probar el proyecto localmente
-
-### Setup
+## Probar localmente
 
 ```bash
-# Clonar e instalar
-git clone <repo-url> camarilla && cd camarilla
-python3 -m venv .venv
-source .venv/bin/activate
+git clone https://github.com/PNahuel5588/camarilla.git && cd camarilla
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-```
-
-### Probar que funciona
-
-```bash
-# Entry point (no hace nada en Fase 1, pero no debe fallar)
-python -m camarilla
-
-# Correr los tests
 pytest -v
-
-# Con coverage
-pytest --cov=camarilla -v
 ```
 
 ### Probar inventario.py manualmente
@@ -31,137 +15,56 @@ pytest --cov=camarilla -v
 from camarilla.inventario import leer_inventario, escribir_inventario
 from camarilla.config import INVENTARIO_PATH, BACKUPS_DIR
 
-# Leer el inventario de ejemplo
 data = leer_inventario()
 print(data)
-# {'Taller': {'Estantería': {'Cajón 1': ['Alicates', 'Destornillador Phillips'], '': ['Caja de herramientas', 'Tornillos varios']}, ...}}
 
-# Modificar y guardar (se crea backup automático)
 data["Taller"]["Estantería"]["Cajón 1"].append("Cinta métrica")
 escribir_inventario(data)
-
-# Verificar que se guardó
-print(leer_inventario())
-
-# Ver los backups creados
-import os
-print(os.listdir(BACKUPS_DIR))
 ```
 
 ### Formato de inventario.md
 
 ```
-# Inventario del Hogar        ← título (se ignora en el data model)
-
+# Inventario del Hogar        ← título (se ignora)
 ## Taller                     ← habitación
 ### Estantería                ← mueble
 - Caja de herramientas        ← item
-- Tornillos varios
-#### Cajón 1                  ← subdivisión (soporta cualquier profundidad)
+#### Cajón 1                  ← subdivisión (cualquier profundidad)
 - Alicates
-- Destornillador Phillips
 ```
-
-Reglas:
-- `#` = título del documento
-- `##` = habitación
-- `###` = mueble
-- `####` y más = subdivisiones (cajones, estantes, etc.)
-- `- ` = item dentro del último header
-- Codificación: UTF-8 siempre
 
 ---
 
-## Deploy en Proxmox CT
+## Deploy en Proxmox CT — TO-DO
 
-### Estado actual (Fase 1)
+### Proxmox Host
+- [ ] Crear CT Debian 12 (4GB RAM, 8GB disco, 2 cores, DHCP)
+- [ ] Iniciar CT y entrar (`pct enter`)
 
-En Fase 1 NO hay bot todavía. Solo tenés el módulo de lectura/escritura del inventario. El bot se implementa en Fase 2. Pero podés preparar el CT ahora.
+### Dentro del CT — Base
+- [ ] `apt update && apt upgrade -y`
+- [ ] `apt install -y python3 python3-pip python3-venv git`
 
-### 1. Crear el CT en Proxmox
+### Dentro del CT — Proyecto
+- [ ] `cd /opt && git clone https://github.com/PNahuel5588/camarilla.git`
+- [ ] `cd camarilla && python3 -m venv .venv`
+- [ ] `source .venv/bin/activate && pip install -e ".[dev]"`
+- [ ] `pytest -v` → verificar que pasan los 33 tests
 
-```bash
-# En el host Proxmox, crear un CT Debian/Ubuntu
-pct create 200 local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst \
-  --hostname camarilla \
-  --memory 1024 \
-  --cores 2 \
-  --storage local-lvm \
-  --rootfs local-lvm:8 \
-  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
-  --unprivileged 1
+### Dentro del CT — Ollama
+- [ ] `curl -fsSL https://ollama.com/install.sh | sh`
+- [ ] `ollama pull qwen2:1.5b`
+- [ ] Verificar: `ollama run qwen2:1.5b "hola"` → responde algo
 
-# Iniciar
-pct start 200
+### Telegram
+- [ ] Hablar con `@BotFather` → `/newbot` → nombre "Camarilla" → obtener **token**
+- [ ] Hablar con `@userinfobot` → obtener tu **user_id**
+- [ ] Pedirle el user_id a cada persona que quieras que use el bot
 
-# Entrar
-pct enter 200
+### Dentro del CT — Service
+- [ ] Crear `/etc/systemd/system/camarilla.service`:
+
 ```
-
-### 2. Instalar dependencias en el CT
-
-```bash
-# Dentro del CT
-apt update && apt upgrade -y
-apt install -y python3 python3-pip python3-venv git
-
-# Clonar el repo
-cd /opt
-git clone <repo-url> camarilla
-cd camarilla
-
-# Crear venv e instalar
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-
-# Verificar
-python -m camarilla
-pytest -v
-```
-
-### 3. Instalar Ollama
-
-```bash
-# Dentro del CT
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Descargar el modelo (qwen2:1.5b — recomendado, liviano y rápido)
-ollama pull qwen2:1.5b
-
-# Verificar que responde
-ollama run qwen2:1.5b "hi"
-```
-
-Requisitos de RAM por modelo:
-
-| Modelo | RAM mínima | Disco | Velocidad |
-|--------|-----------|-------|-----------|
-| `qwen2:1.5b` | ~2 GB | ~1 GB | Rápido (~2-5s) |
-| `phi3:3.8b` | ~4 GB | ~2.5 GB | Medio (~5-15s) |
-| `llama3:8b` | ~8 GB | ~5 GB | Lento (~15-45s) |
-
-Para cambiar el modelo: setear `OLLAMA_MODEL=phi3` en el environment.
-
-### 4. Configurar el bot de Telegram (Fase 2)
-
-```bash
-# 1. Hablar con @BotFather en Telegram
-# 2. /newbot → nombre: "Camarilla" → username: "camarilla_tu_bot"
-# 3. Guardar el token que te da
-# 4. Obtener tu user_id: hablar con @userinfobot
-
-# Configurar como variable de entorno en el CT
-echo 'export TELEGRAM_BOT_TOKEN="tu-token-aqui"' >> ~/.bashrc
-echo 'export TELEGRAM_USER_ID="tu-user-id-aqui"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### 5. Correr el bot como servicio (Fase 2+)
-
-```bash
-# Crear systemd service
-cat > /etc/systemd/system/camarilla.service << 'EOF'
 [Unit]
 Description=Camarilla Home Inventory Bot
 After=network.target
@@ -173,26 +76,58 @@ WorkingDirectory=/opt/camarilla
 ExecStart=/opt/camarilla/.venv/bin/python -m camarilla
 Restart=always
 RestartSec=5
-Environment=TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-Environment=TELEGRAM_USER_ID=${TELEGRAM_USER_ID}
+Environment=TELEGRAM_BOT_TOKEN=tu-token-aqui
+Environment=TELEGRAM_USER_IDS=123456,789012
 Environment=OLLAMA_MODEL=qwen2:1.5b
 
 [Install]
 WantedBy=multi-user.target
-EOF
+```
 
-# Habilitar y arrancar
-systemctl daemon-reload
-systemctl enable camarilla
-systemctl start camarilla
+- [ ] `systemctl daemon-reload`
+- [ ] `systemctl enable camarilla`
+- [ ] `systemctl start camarilla`
+- [ ] `journalctl -u camarilla -f` → verificar que arrancó sin errores
 
-# Ver logs
+### Post-deploy
+- [ ] Probar en Telegram: `/start` → responde "Welcome to Camarilla!"
+- [ ] Probar: `/inventario` → muestra el inventario de ejemplo
+- [ ] Probar: "¿Dónde está el destornillador?" → Ollama responde
+- [ ] Editar `inventario.md` con tus cosas reales
+- [ ] Probar de nuevo con tu inventario real
+
+---
+
+## Operaciones comunes
+
+### Actualizar el bot
+```bash
+cd /opt/camarilla && git pull
+source .venv/bin/activate && pip install -e ".[dev]"
+systemctl restart camarilla
+```
+
+### Agregar un usuario
+Editar `TELEGRAM_USER_IDS` en el service, agregar el ID separado por coma, y restart:
+```bash
+systemctl daemon-reload && systemctl restart camarilla
+```
+
+### Cambiar modelo de IA
+```bash
+ollama pull phi3
+# Editar service: OLLAMA_MODEL=phi3
+systemctl daemon-reload && systemctl restart camarilla
+```
+
+### Ver logs
+```bash
 journalctl -u camarilla -f
 ```
 
 ---
 
-## Checklist de Fases
+## Estado del proyecto
 
 | Fase | Estado | Qué hace |
 |------|--------|----------|
