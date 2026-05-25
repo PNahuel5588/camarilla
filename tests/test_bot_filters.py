@@ -11,13 +11,13 @@ class TestAuthorizedUser:
     """Tests for the AuthorizedUser aiogram filter."""
 
     @pytest.fixture
-    def authorized_user_id(self):
-        return 42
+    def authorized_user_ids(self):
+        return {42, 100}
 
     @pytest.fixture(autouse=True)
-    def patch_config(self, authorized_user_id):
+    def patch_config(self, authorized_user_ids):
         with patch(
-            "camarilla.bot.filters.config.AUTHORIZED_USER_ID", authorized_user_id
+            "camarilla.bot.filters.config.AUTHORIZED_USER_IDS", authorized_user_ids
         ):
             yield
 
@@ -26,9 +26,19 @@ class TestAuthorizedUser:
         return AuthorizedUser()
 
     @pytest.mark.asyncio
-    async def test_authorized_user_returns_true(self, filter_instance, authorized_user_id):
+    async def test_authorized_user_returns_true(self, filter_instance, authorized_user_ids):
         message = MagicMock()
-        message.from_user.id = authorized_user_id
+        message.from_user.id = 42
+        message.text = "/start"
+
+        result = await filter_instance(message)
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_second_authorized_user_returns_true(self, filter_instance, authorized_user_ids):
+        message = MagicMock()
+        message.from_user.id = 100
         message.text = "/start"
 
         result = await filter_instance(message)

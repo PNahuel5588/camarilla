@@ -30,9 +30,10 @@ async def main() -> None:
         raise RuntimeError(
             "TELEGRAM_BOT_TOKEN environment variable is required but not set."
         )
-    if config.AUTHORIZED_USER_ID == 0:
+    if not config.AUTHORIZED_USER_IDS:
         raise RuntimeError(
-            "TELEGRAM_USER_ID environment variable is required but not set."
+            "TELEGRAM_USER_IDS environment variable is required but not set. "
+            "Use comma-separated user IDs, e.g.: TELEGRAM_USER_IDS=123456,789012"
         )
 
     logging.basicConfig(
