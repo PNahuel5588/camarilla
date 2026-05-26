@@ -43,7 +43,7 @@ class TestAskSuccess:
 
         assert result == "Found it."
         messages = mock_client.chat.call_args[1]["messages"]
-        assert "Current inventory:" in messages[0]["content"]
+        assert "INVENTORY DATA:" in messages[0]["content"]
         assert context in messages[0]["content"]
 
 
