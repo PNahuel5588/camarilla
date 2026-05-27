@@ -1,4 +1,4 @@
-# Camarilla
+# Camarilla <img src="./asset.png" width="50" alt="Captura del proyecto">
 
 Asistente de inventario hogareño por Telegram con IA local. Privado, simple, 100% gratuito.
 
